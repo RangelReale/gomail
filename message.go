@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"net/textproto"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,7 +12,7 @@ import (
 
 // Message represents an email.
 type Message struct {
-	header      header
+	header      textproto.MIMEHeader
 	parts       []*part
 	attachments []*file
 	embedded    []*file
@@ -21,9 +22,8 @@ type Message struct {
 	buf         bytes.Buffer
 }
 
-type header map[string][]string
-
 type part struct {
+	header      textproto.MIMEHeader
 	contentType string
 	copier      func(io.Writer) error
 	encoding    Encoding
@@ -33,7 +33,7 @@ type part struct {
 // by default.
 func NewMessage(settings ...MessageSetting) *Message {
 	m := &Message{
-		header:   make(header),
+		header:   make(textproto.MIMEHeader),
 		charset:  "UTF-8",
 		encoding: QuotedPrintable,
 	}
@@ -101,7 +101,9 @@ const (
 // SetHeader sets a value to the given header field.
 func (m *Message) SetHeader(field string, value ...string) {
 	m.encodeHeader(value)
-	m.header[field] = value
+	for _, h := range value {
+		m.header.Add(field, h)
+	}
 }
 
 func (m *Message) encodeHeader(values []string) {
@@ -123,7 +125,7 @@ func (m *Message) SetHeaders(h map[string][]string) {
 
 // SetAddressHeader sets an address to the given header field.
 func (m *Message) SetAddressHeader(field, address, name string) {
-	m.header[field] = []string{m.FormatAddress(address, name)}
+	m.header.Add(field, m.FormatAddress(address, name))
 }
 
 // FormatAddress formats an address and a name as a valid RFC 5322 address.
@@ -170,7 +172,7 @@ func hasSpecials(text string) bool {
 
 // SetDateHeader sets a date to the given header field.
 func (m *Message) SetDateHeader(field string, date time.Time) {
-	m.header[field] = []string{m.FormatDate(date)}
+	m.header.Add(field, m.FormatDate(date))
 }
 
 // FormatDate formats a date as a valid RFC 5322 date.
@@ -180,7 +182,7 @@ func (m *Message) FormatDate(date time.Time) string {
 
 // GetHeader gets a header field.
 func (m *Message) GetHeader(field string) []string {
-	return m.header[field]
+	return m.header[textproto.CanonicalMIMEHeaderKey(field)]
 }
 
 // SetBody sets the body of the message. It replaces any content previously set
@@ -202,6 +204,13 @@ func (m *Message) AddAlternative(contentType, body string, settings ...PartSetti
 func newCopier(s string) func(io.Writer) error {
 	return func(w io.Writer) error {
 		_, err := io.WriteString(w, s)
+		return err
+	}
+}
+
+func newReaderCopier(r io.Reader) func(io.Writer) error {
+	return func(w io.Writer) error {
+		_, err := io.Copy(w, r)
 		return err
 	}
 }
@@ -239,14 +248,28 @@ func SetPartEncoding(e Encoding) PartSetting {
 	})
 }
 
+// SetPartHeaders sets the headers of the part
+func SetPartHeaders(h textproto.MIMEHeader) PartSetting {
+	return PartSetting(func(p *part) {
+		if p.header == nil {
+			p.header = make(textproto.MIMEHeader)
+		}
+		for hn, hv := range h {
+			for _, hs := range hv {
+				p.header.Add(hn, hs)
+			}
+		}
+	})
+}
+
 type file struct {
 	Name     string
-	Header   map[string][]string
+	Header   textproto.MIMEHeader
 	CopyFunc func(w io.Writer) error
 }
 
 func (f *file) setHeader(field, value string) {
-	f.Header[field] = []string{value}
+	f.Header.Add(field, value)
 }
 
 // A FileSetting can be used as an argument in Message.Attach or Message.Embed.
@@ -257,10 +280,13 @@ type FileSetting func(*file)
 //
 // Mandatory headers are automatically added if they are not set when sending
 // the email.
-func SetHeader(h map[string][]string) FileSetting {
+func SetHeader(h textproto.MIMEHeader) FileSetting {
 	return func(f *file) {
-		for k, v := range h {
-			f.Header[k] = v
+
+		for hn, hv := range h {
+			for _, hs := range hv {
+				f.Header.Add(hn, hs)
+			}
 		}
 	}
 }

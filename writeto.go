@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime"
 	"mime/multipart"
+	"net/textproto"
 	"path/filepath"
 	"strings"
 	"time"
@@ -86,14 +87,14 @@ func (w *messageWriter) openMultipart(mimeType string) {
 		w.writeHeader("Content-Type", contentType)
 		w.writeString("\r\n")
 	} else {
-		w.createPart(map[string][]string{
+		w.createPart(textproto.MIMEHeader{
 			"Content-Type": {contentType},
 		})
 	}
 	w.depth++
 }
 
-func (w *messageWriter) createPart(h map[string][]string) {
+func (w *messageWriter) createPart(h textproto.MIMEHeader) {
 	w.partWriter, w.err = w.writers[w.depth-1].CreatePart(h)
 }
 
@@ -105,10 +106,10 @@ func (w *messageWriter) closeMultipart() {
 }
 
 func (w *messageWriter) writePart(p *part, charset string) {
-	w.writeHeaders(map[string][]string{
+	w.writeHeaders(CopyHeadersReplace(p.header, textproto.MIMEHeader{
 		"Content-Type":              {p.contentType + "; charset=" + charset},
 		"Content-Transfer-Encoding": {string(p.encoding)},
-	})
+	}))
 	w.writeBody(p.copier, p.encoding)
 }
 
@@ -238,7 +239,7 @@ func (w *messageWriter) writeLine(s string, charsLeft int) string {
 	return ""
 }
 
-func (w *messageWriter) writeHeaders(h map[string][]string) {
+func (w *messageWriter) writeHeaders(h textproto.MIMEHeader) {
 	if w.depth == 0 {
 		for k, v := range h {
 			if k != "Bcc" {
