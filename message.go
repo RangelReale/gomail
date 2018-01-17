@@ -283,23 +283,23 @@ func SetCopyFunc(f func(io.Writer) error) FileSetting {
 	}
 }
 
-// AttachReader attaches a file using an io.Reader
-func (m *Message) AttachReader(name string, r io.Reader, settings ...FileSetting) {
+// Attach attaches a file using an io.Reader
+func (m *Message) Attach(name string, r io.Reader, settings ...FileSetting) {
 	m.attachments = m.appendFile(m.attachments, fileFromReader(name, r), settings)
 }
 
-// Attach attaches the files to the email.
-func (m *Message) Attach(filename string, settings ...FileSetting) {
+// AttachFile attaches the files to the email.
+func (m *Message) AttachFile(filename string, settings ...FileSetting) {
 	m.attachments = m.appendFile(m.attachments, fileFromFilename(filename), settings)
 }
 
 // EmbedReader embeds the images to the email.
-func (m *Message) EmbedReader(name string, r io.Reader, settings ...FileSetting) {
+func (m *Message) Embed(name string, r io.Reader, settings ...FileSetting) {
 	m.embedded = m.appendFile(m.embedded, fileFromReader(name, r), settings)
 }
 
 // Embed embeds the images to the email.
-func (m *Message) Embed(filename string, settings ...FileSetting) {
+func (m *Message) EmbedFile(filename string, settings ...FileSetting) {
 	m.embedded = m.appendFile(m.embedded, fileFromFilename(filename), settings)
 }
 
