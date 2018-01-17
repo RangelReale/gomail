@@ -2,6 +2,7 @@ package gomail
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -322,12 +323,23 @@ func fileFromFilename(name string) *file {
 }
 
 func fileFromReader(name string, r io.Reader) *file {
+	last_read_size := int64(0)
 	return &file{
 		Name:   filepath.Base(name),
 		Header: make(map[string][]string),
 		CopyFunc: func(w io.Writer) error {
-			if _, err := io.Copy(w, r); err != nil {
+			if last_read_size > 0 {
+				// if is io.Seeker, seek backwards to the amount previously read
+				if rseek, ok := r.(io.Seeker); ok {
+					rseek.Seek(-last_read_size, io.SeekCurrent)
+				} else {
+					return errors.New("Part was already read")
+				}
+			}
+			if n, err := io.Copy(w, r); err != nil {
 				return err
+			} else {
+				last_read_size = n
 			}
 			return nil
 		},
