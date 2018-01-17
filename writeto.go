@@ -138,8 +138,8 @@ func (w *messageWriter) addFiles(files []*file, isAttachment bool) {
 		}
 
 		if !isAttachment {
-			if _, ok := f.Header["Content-ID"]; !ok {
-				f.setHeader("Content-ID", "<"+f.Name+">")
+			if _, ok := f.Header["Content-Id"]; !ok {
+				f.setHeader("Content-Id", "<"+f.Name+">")
 			}
 		}
 		w.writeHeaders(f.Header)
