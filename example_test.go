@@ -17,7 +17,7 @@ func Example() {
 	m.SetAddressHeader("Cc", "dan@example.com", "Dan")
 	m.SetHeader("Subject", "Hello!")
 	m.SetBody("text/html", "Hello <b>Bob</b> and <i>Cora</i>!")
-	m.Attach("/home/Alex/lolcat.jpg")
+	m.AttachFile("/home/Alex/lolcat.jpg")
 
 	d := gomail.NewDialer("smtp.example.com", 587, "user", "123456")
 
@@ -140,7 +140,7 @@ func Example_noSMTP() {
 var m *gomail.Message
 
 func ExampleSetCopyFunc() {
-	m.Attach("foo.txt", gomail.SetCopyFunc(func(w io.Writer) error {
+	m.AttachFile("foo.txt", gomail.SetCopyFunc(func(w io.Writer) error {
 		_, err := w.Write([]byte("Content of foo.txt"))
 		return err
 	}))
@@ -148,11 +148,11 @@ func ExampleSetCopyFunc() {
 
 func ExampleSetHeader() {
 	h := map[string][]string{"Content-ID": {"<foo@bar.mail>"}}
-	m.Attach("foo.jpg", gomail.SetHeader(h))
+	m.AttachFile("foo.jpg", gomail.SetHeader(h))
 }
 
 func ExampleRename() {
-	m.Attach("/tmp/0000146.jpg", gomail.Rename("picture.jpg"))
+	m.AttachFile("/tmp/0000146.jpg", gomail.Rename("picture.jpg"))
 }
 
 func ExampleMessage_AddAlternative() {
@@ -168,11 +168,11 @@ func ExampleMessage_AddAlternativeWriter() {
 }
 
 func ExampleMessage_Attach() {
-	m.Attach("/tmp/image.jpg")
+	m.AttachFile("/tmp/image.jpg")
 }
 
 func ExampleMessage_Embed() {
-	m.Embed("/tmp/image.jpg")
+	m.EmbedFile("/tmp/image.jpg")
 	m.SetBody("text/html", `<img src="cid:image.jpg" alt="My image" />`)
 }
 
